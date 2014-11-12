@@ -1,0 +1,23 @@
+#!/bin/bash
+# Usage:
+# audio_output <devicename>
+# e.g.:
+# audio_output hdmi
+# audio_output analog
+#
+# This looks for an audio output device with a name matching the given string,
+# then sets all current audio sources to use that device as their output.
+#
+# So, in short, it should switch all active audio to the chosen output.
+
+devicename=${1:?No device name given}
+deviceindex=$(pacmd list-sinks | egrep -B1 "name:.*$devicename" | sed -n 's/.*index: \([0-9]\+\).*/\1/p')
+if [[ -z "$deviceindex" ]]; then
+    echo Device not found
+    exit 1
+fi
+
+for inputindex in $(pacmd list-sink-inputs | sed -n 's/.*index: \([0-9]\+\).*/\1/p'); do
+    pacmd move-sink-input $inputindex $deviceindex > /dev/null
+done
+

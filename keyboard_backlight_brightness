@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+# Adjust the keyboard backlight brightness
+#
+# Usage:
+# keyboard_backlight_brightness get
+# keyboard_backlight_brightness max
+# keyboard_backlight_brightness up
+# keyboard_backlight_brightness down
+
+ledpath=/sys/class/leds/asus::kbd_backlight
+max=$(cat $ledpath/max_brightness)
+curr=$(cat $ledpath/brightness)
+
+cmd=${1:-get}
+
+function set()
+{
+    echo set $1
+    echo $1 > $ledpath/brightness 
+}
+echo $curr $max $cmd
+case "$cmd" in
+    get)
+        echo $curr
+        ;;
+    max)
+        if ((curr<max)); then
+            set $max
+        fi
+        ;;
+    up)
+        if ((curr<max)); then
+            set $((curr+1))
+        fi
+        ;;
+    down)
+        if ((curr>0)); then
+            set $((curr-1))
+        fi
+        ;;
+    *)
+        exit 1
+        ;;
+esac
+

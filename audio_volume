@@ -1,0 +1,66 @@
+#!/bin/bash
+#
+# Usage:
+# audio_volume up
+# audio_volume down
+# audio_volume toggle
+#
+# This adjusts / mutes the volume of the audio device with name 'analog-stereo'.
+
+devicename=analog-stereo
+deviceindex=$(pacmd list-sinks | egrep -B1 "name:.*$devicename" | sed -n 's/.*index: \([0-9]\+\).*/\1/p')
+val_volume_step=3276
+val_volume_max=65536
+
+volumes=($(pacmd list-sinks | sed -n "/index: $deviceindex/,/index: / s/.*volume: *0: *\([0-9]\+\)% *1: *\([0-9]\+\)%.*/\1 \2/p"))
+muted=($(pacmd list-sinks | sed -n "/index: $deviceindex/,/index: / s/.*muted: \([yesno]\+\).*/\1/p"))
+
+case "$muted" in
+    no)
+        val_muted=0
+        ;;
+    yes)
+        val_muted=1
+        ;;
+    *)
+        exit 1
+        ;;
+esac
+
+if ((${#volumes[*]} != 2)); then
+    exit 1
+fi
+
+val_volume=$(( (val_volume_max * (${volumes[0]} + ${volumes[1]})) / 200 ))
+
+if (( $# < 1)); then
+    exit 1
+fi
+
+cmd="$1"
+case "$cmd" in
+    up)
+        val_volume=$((val_volume + val_volume_step))
+        if ((val_volume > val_volume_max)); then
+            val_volume=$val_volume_max
+        fi
+        echo $val_volume
+        pacmd set-sink-volume $deviceindex $val_volume > /dev/null
+        ;;
+    down)
+        val_volume=$((val_volume - val_volume_step))
+        if ((val_volume < 0)); then
+            val_volume=0
+        fi
+        pacmd set-sink-volume $deviceindex $val_volume > /dev/null
+        ;;
+    toggle)
+        val_muted=$((1-val_muted))
+        pacmd set-sink-mute $deviceindex $val_muted  > /dev/null
+        ;;
+    *)
+        exit 1
+esac
+
+
+
